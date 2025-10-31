@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guess Who — V7 Community Fixed</title>
+<style>
+:root{
+  --bg:#0f1220;--card:#171a2b;--muted:#8ea0b6;--text:#e7edf6;
+  --accent:#6ec3ff;--glow:#8fd3ff;--gap:16px;--tile:#0f1430;--line:#2a3152;
+  --headroom:12%;
+}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font-family:ui-sans-serif,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid #222640;border-radius:16px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.h{margin:4px 0 10px}
+small{color:var(--muted)}
+button,input,select,textarea{padding:10px 12px;border-radius:12px;border:1px solid #243052;background:#0b0e1a;color:var(--text)}
+button{background:var(--accent);color:#04101a;font-weight:700;cursor:pointer}
+button.secondary{background:#0b0e1a;color:#e7edf6;border-color:#243052}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+label.inline{display:inline-flex;gap:8px;align-items:center}
+
+/* Tabs */
+.tabsbar{display:flex;gap:8px;margin:8px 0 12px}
+.tabbtn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;
+  border:1px solid #243052;background:#0b0e1a;color:#e7edf6;font-weight:700;cursor:pointer;user-select:none}
+input[name="tabs"]{position:absolute;left:-9999px}
+#tCreate:checked ~ .tabsbar label[for="tCreate"],
+#tPlay:checked ~ .tabsbar label[for="tPlay"],
+#tCommunity:checked ~ .tabsbar label[for="tCommunity"]{
+  background:#11152a;border-color:#2e3a62;box-shadow:inset 0 0 0 2px #2e3a62
+}
+.panels > section{display:none}
+#tCreate:checked ~ .panels #panelCreate{display:block}
+#tPlay:checked ~ .panels #panelPlay{display:block}
+#tCommunity:checked ~ .panels #panelCommunity{display:block}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--gap)}
+.tile{border:1px solid var(--line);border-radius:20px;overflow:hidden;user-select:none;
+  transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+  background:var(--tile);position:relative;aspect-ratio:1/1}
+.tile:hover{transform:translateY(-2px)}
+.tile img{width:100%;height:100%;object-fit:cover;object-position:50% var(--headroom)}
+.tile .name{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;
+  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.65));
+  font-size:12px;text-align:center}
+.tile .x{position:absolute;inset:0;display:none;place-items:center;font-size:42px;font-weight:900;background:rgba(0,0,0,.55)}
+.tile.eliminated .x{display:grid}
+.tile.highlight{box-shadow:0 0 0 3px var(--glow), 0 0 22px var(--glow);border-color:var(--glow);animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{0%{box-shadow:0 0 0 3px var(--glow),0 0 10px var(--glow)}100%{box-shadow:0 0 0 5px var(--glow),0 0 30px var(--glow)}}
+
+/* Builder */
+.builder .pair{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+.list{max-height:260px;overflow:auto;border:1px dashed var(--line);border-radius:12px;padding:8px;margin-top:8px}
+.item{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:8px;padding:6px;border-radius:10px}
+.item:hover{background:#0d1227}
+.item img{width:40px;height:40px;object-fit:cover;object-position:50% var(--headroom);border-radius:8px;background:#0b0e1a;border:1px solid #2a3152}
+
+/* Spinner modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:50}
+.modal .inner{background:var(--card);border:1px solid #324066;border-radius:18px;padding:16px;max-width:90vw}
+#spinCanvas{width:min(70vmin,640px);height:min(70vmin,640px);display:block}
+.spinner-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px}
+.arrow{width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:18px solid var(--accent);margin:0 auto}
+
+footer{margin-top:14px;color:var(--muted);font-size:13px}
+
+/* Contrast bump for tile names */
+#name-contrast-override{}
+.tile .name{background: rgba(0,0,0,0.88); color: #ffffff; font-weight: 700; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); padding: 8px 10px}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="h">Guess Who — V7 Community Fixed</h1>
+
+  <!-- Tabs -->
+  <input type="radio" name="tabs" id="tCreate" checked>
+  <input type="radio" name="tabs" id="tPlay">
+  <input type="radio" name="tabs" id="tCommunity">
+
+  <div class="tabsbar">
+    <label for="tCreate" class="tabbtn">(1) Create</label>
+    <label for="tPlay" class="tabbtn">(2) Play</label>
+    <label for="tCommunity" class="tabbtn">(3) Community</label>
+  </div>
+
+  <div class="panels">
+
+    <!-- ===== CREATE ===== -->
+    <section id="panelCreate">
+      <div class="card">
+        <div class="controls" style="justify-content:space-between">
+          <div class="controls">
+            <button id="newBoard" type="button">New</button>
+            <button id="downloadBoard" class="secondary" type="button">Download .json</button>
+            <button id="btnUploadJson" class="secondary" type="button">Upload Pack</button>
+            <input id="uploadJson" type="file" accept="application/json" style="display:none">
+            <button id="btnAddImages" class="secondary" type="button">Add images</button>
+            <input id="uploadImages" type="file" accept="image/*" multiple style="display:none">
+            <button id="btnPostLocal" type="button">Post to Community (Local)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card builder">
+        <h2 class="h">Add Characters</h2>
+        <div class="pair">
+          <input id="nameInput" type="text" placeholder="Character name (optional)" maxlength="60">
+          <input id="imgInput" type="text" placeholder="Image URL (optional)">
+          <button id="addChar" type="button">Add</button>
+        </div>
+        <label style="margin-top:10px">Current list</label>
+        <div id="pairs" class="list"></div>
+
+        <footer><small>Autosaves locally • Reorder with ↑ ↓ or drag • Placeholders auto-generate if no image</small></footer>
+      </div>
+    </section>
+
+    <!-- ===== PLAY ===== -->
+    <section id="panelPlay">
+      <div class="card">
+        <div class="controls" style="justify-content:space-between">
+          <div class="controls">
+            <label class="inline"><span>Columns</span>
+              <input id="colRange" type="range" min="2" max="9" value="5">
+            </label>
+            <label class="inline"><input id="showNames" type="checkbox"> Show names</label>
+          </div>
+          <div class="controls">
+            <button id="shuffle" class="secondary" type="button" title="S">Shuffle</button>
+            <button id="clearXs" class="secondary" type="button" title="C">Clear X’s</button>
+            <button id="fullscreenBtn" class="secondary" type="button" title="F">Fullscreen</button>
+            <button id="exportPng" class="secondary" type="button">Export PNG</button>
+            <button id="openSpinner" type="button">🎯 Spin</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="gridWrap" class="card" style="padding:12px;height:70vh">
+        <div id="grid" class="grid"></div>
+      </div>
+    </section>
+
+    <!-- ===== COMMUNITY ===== -->
+    <section id="panelCommunity">
+      <div class="card">
+        <div class="controls" style="justify-content:space-between">
+          <div class="controls">
+            <input id="searchCommunity" type="text" placeholder="Search packs…" style="min-width:220px">
+            <button id="refreshCommunity" class="secondary" type="button">Refresh</button>
+          </div>
+          <div class="controls">
+            <input id="githubUrl" type="text" placeholder="Raw GitHub JSON URL (packs list)" style="min-width:360px">
+            <button id="saveGithubUrl" class="secondary" type="button">Use URL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="communityList" class="list" style="max-height:60vh"></div>
+      </div>
+      <footer><small id="communityStatus" style="opacity:.9"></small></footer>
+    </section>
+
+  </div>
+
+  <footer>Use Download/Upload (.json) to share boards or Export PNG for a picture.</footer>
+</div>
+
+<!-- Spinner Modal -->
+<div id="spinnerModal" class="modal" aria-hidden="true">
+  <div class="inner">
+    <div class="arrow"></div>
+    <canvas id="spinCanvas" width="600" height="600"></canvas>
+    <div class="spinner-row"><button id="spinBtn" type="button">Spin</button><button id="closeSpin" class="secondary" type="button">Close</button></div>
+  </div>
+</div>
+
+<!-- Winner Modal -->
+<div id="winnerModal" class="modal" aria-hidden="true" style="display:none">
+  <div class="inner" style="max-width:600px;text-align:center">
+    <h2 class="h">Winner</h2>
+    <img id="winnerImg" alt="" style="width:240px;height:240px;object-fit:cover;object-position:50% var(--headroom);border-radius:18px;border:1px solid #2a3152;background:#0b0e1a">
+    <div id="winnerName" style="margin-top:8px;font-weight:800;font-size:20px"></div>
+    <div class="spinner-row" style="justify-content:center;margin-top:12px">
+      <button id="confirmWinner" type="button">Confirm</button>
+      <button id="closeWinner" class="secondary" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti Canvas -->
+<canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;display:none;z-index:60"></canvas>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+/* ===== Helpers ===== */
+const $=id=>document.getElementById(id);
+function filenameFromUrl(url){
+  try{
+    const u=new URL(url); let p=u.pathname||'';
+    if(p.endsWith('/')) p=p.slice(0,-1);
+    const base=p.substring(p.lastIndexOf('/')+1);
+    return base || '';
+  }catch{
+    const norm=(url||'').replace(/\\\\/g,'/');
+    const base=norm.substring(norm.lastIndexOf('/')+1);
+    return base || '';
+  }
+}
+function stripExtension(name){ return name.replace(/\\.[a-z0-9]+$/i,''); }
+
+/* ===== State ===== */
+let board=[], eliminated=new Set(), highlightedTile=null, lastEmbeddedDataURL='';
+const grid=$('grid'); const pairs=$('pairs');
+const GAP=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap'))||16;
+
+/* ===== Placeholder ===== */
+function placeholderDataURL(name){
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
+  const ctx=c.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,256,256); g.addColorStop(0,'#0a2a4e'); g.addColorStop(1,'#17325e');
+  ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height);
+  const initials=(name||'??').trim().split(/\\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase()||'??';
+  ctx.fillStyle='rgba(255,255,255,.12)'; for(let i=0;i<8;i++){ ctx.beginPath(); ctx.arc(Math.random()*256,Math.random()*256,Math.random()*40+10,0,Math.PI*2); ctx.fill(); }
+  ctx.fillStyle='#e7edf6'; ctx.font='bold 120px system-ui,Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(initials,128,140);
+  return c.toDataURL('image/png');
+}
+
+/* ===== Renderers ===== */
+function tileNodeFor(c){
+  const t=document.createElement('div'); t.className='tile'+(eliminated.has(c.id)?' eliminated':''); t.dataset.id=c.id;
+  const img=document.createElement('img'); img.src=c.img||placeholderDataURL(c.name||''); t.appendChild(img);
+  const x=document.createElement('div'); x.className='x'; x.textContent='X'; t.appendChild(x);
+  if($('showNames')?.checked){ const nm=document.createElement('div'); nm.className='name'; nm.textContent=c.name||''; t.appendChild(nm); }
+  t.addEventListener('click',()=>{ const id=c.id; if(eliminated.has(id)) eliminated.delete(id); else eliminated.add(id); autosave(); renderGrid(); });
+  return t;
+}
+function renderGrid(){
+  if(!grid) return; grid.innerHTML='';
+  board.forEach(c=> grid.appendChild(tileNodeFor(c)));
+  if(highlightedTile){ const node=[...grid.children].find(el=>el.dataset.id===highlightedTile); if(node) node.classList.add('highlight'); }
+
+  if(document.fullscreenElement===$('gridWrap')){
+    autoSizeFullscreen();
+  }else{
+    const cols=+($('colRange')?.value||5);
+    grid.style.gridTemplateColumns=`repeat(${cols}, minmax(0,1fr))`;
+    [...grid.children].forEach(t=>{t.style.width='';t.style.height='';});
+  }
+  autosave();
+}
+function renderList(){
+  if(!pairs) return; pairs.innerHTML='';
+  board.forEach((c,i)=>{
+    const row=document.createElement('div'); row.className='item'; row.dataset.index=i;
+    const img=document.createElement('img'); img.src=c.img||placeholderDataURL(c.name||'');
+    const name=document.createElement('div'); name.textContent=c.name||'';
+    const up=document.createElement('button'); up.textContent='↑'; up.className='secondary'; up.type='button';
+    up.onclick=()=>{ if(i<=0) return; [board[i-1],board[i]]=[board[i],board[i-1]]; autosave(); renderList(); renderGrid(); };
+    const down=document.createElement('button'); down.textContent='↓'; down.className='secondary'; down.type='button';
+    down.onclick=()=>{ if(i>=board.length-1) return; [board[i+1],board[i]]=[board[i],board[i+1]]; autosave(); renderList(); renderGrid(); };
+    const del=document.createElement('button'); del.textContent='Delete'; del.className='secondary'; del.type='button';
+    del.onclick=()=>{ board.splice(i,1); eliminated.delete(c.id); autosave(); renderList(); renderGrid(); };
+    row.append(img,name,up,down,del); pairs.appendChild(row);
+  });
+}
+
+/* ===== Fullscreen perfect fit ===== */
+function autoSizeFullscreen(){
+  const wrap=$('gridWrap'); if(!wrap||!grid){ return; }
+  const N=Math.max(1, board.length);
+  const padding=24;
+  const W=wrap.clientWidth - padding;
+  const H=wrap.clientHeight - padding;
+  if(W<=0||H<=0){ return; }
+  let bestCols=1, bestSize=0;
+  for(let cols=1; cols<=N; cols++){
+    const rows = Math.ceil(N/cols);
+    const sizeByWidth = Math.floor((W - (cols-1)*GAP) / cols);
+    const sizeByHeight = Math.floor((H - (rows-1)*GAP) / rows);
+    const size = Math.min(sizeByWidth, sizeByHeight);
+    if(size > bestSize){ bestSize=size; bestCols=cols; }
+  }
+  if(bestSize <= 0){
+    const rows = Math.ceil(Math.sqrt(N*H/W));
+    bestCols = Math.ceil(N/rows);
+    bestSize = Math.floor((W - (bestCols-1)*GAP) / bestCols);
+  }
+  grid.style.gridTemplateColumns = `repeat(${bestCols}, ${bestSize}px)`;
+  [...grid.children].forEach(t=>{ t.style.width=bestSize+'px'; t.style.height=bestSize+'px'; });
+}
+window.addEventListener('resize', ()=>{ if(document.fullscreenElement===$('gridWrap')) autoSizeFullscreen(); });
+document.addEventListener('fullscreenchange', ()=>{
+  const fsBtn=$('fullscreenBtn');
+  if(document.fullscreenElement===$('gridWrap')){
+    if(fsBtn) fsBtn.textContent='Exit Fullscreen';
+    autoSizeFullscreen();
+  }else{
+    if(fsBtn) fsBtn.textContent='Fullscreen';
+    renderGrid();
+  }
+});
+
+/* ===== Core ops ===== */
+function newBoard(){ board=[]; eliminated.clear(); highlightedTile=null; autosave(); renderList(); renderGrid(); }
+function addChar(name,img){
+  const nm=(name||'').trim();
+  const im=(lastEmbeddedDataURL || (img||'').trim());
+  if(!nm && !im){ alert('Add at least a name or an image.'); return; }
+  let autoName=nm;
+  if(!autoName){
+    const base = filenameFromUrl(im);
+    autoName = base ? stripExtension(base) : '';
+    if(!autoName) autoName = 'Character '+(board.length+1);
+  }
+  const id='char-'+Math.random().toString(36).slice(2,10);
+  board.push({ id, name:autoName, img:im });
+  lastEmbeddedDataURL='';
+  autosave(); renderList(); renderGrid();
+}
+function downloadBoard(){
+  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked) };
+  const blob=new Blob([JSON.stringify({version:2,board,meta},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='guess-who-board.json'; document.body.appendChild(a); a.click(); a.remove();
+}
+
+function uploadBoardFromFile(file){
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const raw = r.result;
+    let data = JSON.parse(raw);
+
+    function toBoardArray(arr){
+      return (arr||[]).map((x)=>{
+        const name = x.name || x.title || x.label || '';
+        const img  = x.img || x.image || x.url || x.picture || '';
+        const id   = x.id || ('id-'+Math.random().toString(36).slice(2,10));
+        return { id, name, img };
+      });
+    }
+
+    let parsedBoard=null, parsedMeta=null;
+
+    if(data && Array.isArray(data.board)){
+      parsedBoard = toBoardArray(data.board);
+      parsedMeta = data.meta || null;
+    }
+    if(!parsedBoard && data && data.data && Array.isArray(data.data.board)){
+      parsedBoard = toBoardArray(data.data.board);
+      parsedMeta = data.data.meta || null;
+    }
+    if(!parsedBoard && Array.isArray(data)){
+      parsedBoard = toBoardArray(data);
+    }
+    const altKeys = ['items','pairs','characters','tiles','people'];
+    if(!parsedBoard){
+      for(const k of altKeys){
+        if(Array.isArray(data?.[k])){ parsedBoard = toBoardArray(data[k]); break; }
+      }
+    }
+    if(!parsedBoard && Array.isArray(data?.data)){
+      parsedBoard = toBoardArray(data.data);
+      parsedMeta = data.meta || null;
+    }
+    if(!parsedBoard) throw new Error('unrecognized');
+
+    board = parsedBoard.map(x=>({ id: x.id || ('id-'+Math.random().toString(36).slice(2,10)), name: x.name || '', img: x.img || '' }));
+    eliminated.clear(); highlightedTile=null;
+    if(parsedMeta){ if(parsedMeta.columns && $('colRange')) $('colRange').value=parsedMeta.columns; if(parsedMeta.showNames && $('showNames')) $('showNames').checked=true; }
+    autosave(); renderList(); renderGrid();
+  }catch(e){
+    alert('Bad JSON file (unrecognized structure). Try exporting a pack first to see the expected shape.');
+  } };
+  r.readAsText(file);
+}
+function shuffle(){ for(let i=board.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[board[i],board[j]]=[board[j],board[i]];} autosave(); renderList(); renderGrid(); }
+
+/* ===== Bindings ===== */
+function bind(id,ev,fn){ const el=$(id); if(el) el.addEventListener(ev,fn); }
+bind('newBoard','click',newBoard);
+bind('downloadBoard','click',downloadBoard);
+bind('addChar','click',()=>{ const nm=$('nameInput'); const im=$('imgInput'); addChar(nm?.value,im?.value); if(nm) nm.value=''; if(im) im.value=''; nm?.focus(); });
+bind('shuffle','click',shuffle);
+bind('clearXs','click',()=>{ eliminated.clear(); autosave(); renderGrid(); });
+bind('colRange','input',()=> renderGrid());
+bind('showNames','change',()=> renderGrid());
+
+bind('btnUploadJson','click',()=> $('uploadJson')?.click());
+bind('uploadJson','change',e=>{ const f=e.target.files?.[0]; if(f){ uploadBoardFromFile(f); } e.target.value=''; });
+
+bind('btnAddImages','click',()=> $('uploadImages')?.click());
+bind('uploadImages','change',async e=>{
+  const files = [...(e.target.files||[])];
+  if(!files.length) return;
+  const first = files.find(f => /^image\//i.test(f.type));
+  if(!first) { e.target.value=''; return; }
+  await new Promise(res=>{
+    const rdr = new FileReader();
+    rdr.onload = () => { const urlField = $('imgInput'); if (urlField) urlField.value = rdr.result; res(); };
+    rdr.onerror = () => res();
+    rdr.readAsDataURL(first);
+  });
+  e.target.value='';
+});
+
+/* ===== Fullscreen, Export PNG, Spinner ===== */
+bind('fullscreenBtn','click',async()=>{
+  const wrap=$('gridWrap'); const fsBtn=$('fullscreenBtn'); if(!wrap||!fsBtn) return;
+  if(!document.fullscreenElement){ await wrap.requestFullscreen?.(); fsBtn.textContent='Exit Fullscreen'; setTimeout(autoSizeFullscreen, 50); }
+  else { await document.exitFullscreen?.(); fsBtn.textContent='Fullscreen'; renderGrid(); }
+});
+bind('exportPng','click',async()=>{
+  if(!board.length){ alert('No tiles to export.'); return; }
+  let cols, size;
+  if(document.fullscreenElement===$('gridWrap')){
+    const template=getComputedStyle(grid).gridTemplateColumns;
+    cols = template.split(' ').length;
+    const m = template.match(/(\d+)px/);
+    size = m ? parseInt(m[1],10) : 128;
+  }else{
+    cols=+($('colRange')?.value||5);
+    const wrapW=$('gridWrap')?.clientWidth-24;
+    size = Math.floor((wrapW-(cols-1)*GAP)/cols);
+  }
+  const rows=Math.ceil(board.length/cols);
+  const showNames=!!($('showNames')?.checked);
+  const nameH = showNames ? Math.max(18, Math.floor(size*0.12)) : 0;
+  const canvas=document.createElement('canvas'); canvas.width = cols*size + (cols-1)*GAP; canvas.height = rows*(size+nameH) + (rows-1)*GAP;
+  const cx=canvas.getContext('2d'); cx.fillStyle=getComputedStyle(document.body).getPropertyValue('--bg').trim()||'#0f1220'; cx.fillRect(0,0,canvas.width,canvas.height);
+  const loadImg=(src)=>new Promise(res=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; });
+  for(let i=0;i<board.length;i++){
+    const c=board[i]; const col=i%cols, row=Math.floor(i/cols); const x=col*(size+GAP), y=row*(size+nameH+GAP);
+    let im=null; if(c.img) im=await loadImg(c.img); if(!im) im=await loadImg(placeholderDataURL(c.name||''));
+    cx.save(); cx.beginPath(); const r=18; roundRect(cx,x,y,size,size,r); cx.clip(); cx.drawImage(im, x, y, size, size);
+    if(eliminated.has(c.id)){ cx.fillStyle='rgba(0,0,0,.55)'; cx.fillRect(x,y,size,size); cx.fillStyle='#fff'; cx.font=`bold ${Math.floor(size*0.35)}px system-ui,Arial`; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('X', x+size/2, y+size/2); }
+    cx.restore();
+    if(showNames){ cx.fillStyle='rgba(0,0,0,.65)'; cx.fillRect(x, y+size-nameH, size, nameH); cx.fillStyle='#e7edf6'; cx.font=`bold ${Math.max(12,Math.floor(nameH*0.65))}px system-ui,Arial`; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText((c.name||'').slice(0,40), x+size/2, y+size-nameH/2); }
+  }
+  const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='guess-who-board.png'; document.body.appendChild(a); a.click(); a.remove();
+});
+function roundRect(ctx,x,y,w,h,r){const rr=Math.min(r,w/2,h/2);ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();}
+
+/* Spinner */
+const modal=$('spinnerModal'); const spinCanvas=$('spinCanvas'); const ctx=spinCanvas?.getContext('2d');
+let spinning=false,angle=0,targetAngle=0;
+function dpr(){ return window.devicePixelRatio||1; }
+function sizeSpinCanvas(){
+  if(!spinCanvas||!ctx) return;
+  const w=600, h=600, ratio=dpr();
+  spinCanvas.width=w*ratio; spinCanvas.height=h*ratio; spinCanvas.style.width=w+'px'; spinCanvas.style.height=h+'px';
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+}
+function drawWheel(){
+  if(!ctx) return;
+  const W=600, H=600, cx=W/2, cy=H/2, r=Math.min(cx,cy)-8;
+  ctx.clearRect(0,0,W,H);
+  const n = board.length || 1;
+  const slice = 2*Math.PI/n;
+
+  // helper for font fit
+  function fitFont(text, maxWidth, start=18, min=11){
+    let size = start;
+    ctx.font = `bold ${size}px system-ui,Arial`;
+    while (size > min && ctx.measureText(text).width > maxWidth){
+      size -= 1;
+      ctx.font = `bold ${size}px system-ui,Arial`;
+    }
+    return size;
+  }
+
+  for(let i=0;i<n;i++){
+    const start = angle + i*slice;
+    const end   = start + slice;
+    // slice
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
+    ctx.fillStyle = i%2 ? '#223154' : '#10213b';
+    ctx.fill();
+    ctx.strokeStyle='#2e4878'; ctx.lineWidth=2; ctx.stroke();
+
+    const mid = (start+end)/2;
+    const textRadius = r * 0.72;
+    const tx = cx + Math.cos(mid) * textRadius;
+    const ty = cy + Math.sin(mid) * textRadius;
+
+    const label = (board[i]?.name || ('#'+(i+1))).toString();
+    const maxWidth = textRadius * slice * 0.95;
+    let fontSize = fitFont(label.slice(0,28), maxWidth, 18, 11);
+    ctx.font = `bold ${fontSize}px system-ui,Arial`;
+    ctx.fillStyle = '#e7edf6';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (ctx.measureText(label).width > maxWidth){
+      const words = label.split(' ');
+      if (words.length > 1){
+        const midIdx = Math.ceil(words.length/2);
+        const line1 = words.slice(0, midIdx).join(' ');
+        const line2 = words.slice(midIdx).join(' ');
+        fontSize = fitFont((ctx.measureText(line1).width > ctx.measureText(line2).width)?line1:line2, maxWidth, fontSize, 10);
+        ctx.font = `bold ${fontSize}px system-ui,Arial`;
+        ctx.fillText(line1, tx, ty - fontSize*0.65);
+        ctx.fillText(line2, tx, ty + fontSize*0.65);
+      }else{
+        ctx.fillText(label, tx, ty);
+      }
+    }else{
+      ctx.fillText(label, tx, ty);
+    }
+  }
+}
+function onPick(idx){
+  if(modal) modal.style.display='none'; const chosen=board[idx]; if(!chosen) return;
+  if(highlightedTile){ const prev=[...grid.children].find(el=>el.dataset.id===highlightedTile); if(prev) prev.classList.remove('highlight'); }
+  highlightedTile=chosen.id;
+  const node=[...grid.children].find(el=>el.dataset.id===highlightedTile);
+  if(node){ node.classList.add('highlight'); node.scrollIntoView({behavior:'smooth',block:'center'}); }
+  showWinnerCard(chosen);
+  autosave();
+}
+$('openSpinner')?.addEventListener('click',()=>{ if(!modal) return; sizeSpinCanvas(); modal.style.display='grid'; drawWheel(); });
+$('closeSpin')?.addEventListener('click',()=>{ if(!modal) return; modal.style.display='none'; });
+$('spinBtn')?.addEventListener('click',()=>{
+  if(!ctx || !board.length || spinning) return;
+  spinning=true; const n=board.length, slice=2*Math.PI/n;
+  const choice=Math.floor(Math.random()*n);
+  targetAngle=Math.PI*2*3+(Math.PI*1.5)-(choice*slice+slice/2);
+  const start=performance.now(), dur=2200+Math.random()*800;
+  (function anim(t){
+    const now=performance.now(); const k=Math.min(1,(now-start)/dur), ease=1-Math.pow(1-k,3); angle=targetAngle*ease; drawWheel();
+    if(k<1) requestAnimationFrame(anim); else { spinning=false; onPick(choice); }
+  })(start);
+});
+
+/* ===== Winner Pop-up + Confetti ===== */
+const confettiCanvas = document.getElementById('confettiCanvas');
+const cctx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
+function sizeConfetti(){ if(!confettiCanvas) return; confettiCanvas.width=window.innerWidth*(window.devicePixelRatio||1); confettiCanvas.height=window.innerHeight*(window.devicePixelRatio||1); confettiCanvas.style.width=window.innerWidth+'px'; confettiCanvas.style.height=window.innerHeight+'px'; if(cctx){ cctx.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0);} }
+window.addEventListener('resize', sizeConfetti); sizeConfetti();
+
+function runConfetti(duration=1200){
+  if(!confettiCanvas || !cctx) return;
+  confettiCanvas.style.display='block';
+  const pieces = Array.from({length:140}, ()=>({ x: Math.random()*window.innerWidth, y: -20 - Math.random()*40, vx: (Math.random()-0.5)*2, vy: 2+Math.random()*3, r: 2+Math.random()*4, rot: Math.random()*Math.PI, vr: (Math.random()-0.5)*0.2 }));
+  const start = performance.now();
+  (function anim(t0){
+    const now = performance.now();
+    const k = (now - start)/duration;
+    cctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    pieces.forEach(p=>{
+      p.x += p.vx*2; p.y += p.vy*2; p.rot += p.vr;
+      cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot);
+      cctx.fillStyle = ['#6ec3ff','#8fd3ff','#e7edf6','#223154','#10213b'][Math.floor(Math.random()*5)];
+      cctx.fillRect(-p.r, -p.r, 2*p.r, 2*p.r);
+      cctx.restore();
+    });
+    if(k<1){ requestAnimationFrame(anim); } else { confettiCanvas.style.display='none'; }
+  })(start);
+}
+function showWinnerCard(chosen){
+  const wmodal = $('winnerModal'); if(!wmodal) return;
+  const wimg = $('winnerImg'); const wname=$('winnerName');
+  wimg.src = chosen.img || placeholderDataURL(chosen.name||'');
+  wname.textContent = chosen.name || '';
+  wmodal.style.display='grid';
+  runConfetti(1400);
+  const confirm = $('confirmWinner'); const close = $('closeWinner');
+  const onConfirm = ()=>{ wmodal.style.display='none'; cleanup(); };
+  const onClose = ()=>{ wmodal.style.display='none'; cleanup(); };
+  function cleanup(){ confirm && confirm.removeEventListener('click', onConfirm); close && close.removeEventListener('click', onClose); }
+  confirm && confirm.addEventListener('click', onConfirm);
+  close && close.addEventListener('click', onClose);
+}
+
+/* ===== Community (GitHub URL + Local Merge) ===== */
+const GH_KEY = 'gw_gh_url';
+let GH_URL = localStorage.getItem(GH_KEY) || '';
+function saveGithubUrl(url){ GH_URL=(url||'').trim(); localStorage.setItem(GH_KEY, GH_URL); }
+
+async function fetchCommunity(){
+  const status=$('communityStatus'); if(status) status.textContent='';
+  const listEl=$('communityList'); if(listEl) listEl.innerHTML='';
+
+  // Local packs
+  let localPacks=[];
+  try{ localPacks = JSON.parse(localStorage.getItem('gw_local_packs')||'[]'); }catch{ localPacks=[]; }
+
+  // GitHub packs
+  let remotePacks=[];
+  if(GH_URL){
+    try{
+      const res = await fetch(GH_URL, { cache:'no-store' });
+      if(res.ok){
+        const payload = await res.json();
+        remotePacks = payload?.packs || [];
+      }
+    }catch{}
+  }
+
+  const merged = [...localPacks, ...remotePacks];
+  renderCommunity(merged);
+  if(status){
+    if(!merged.length){
+      status.innerHTML = GH_URL ? 'No packs yet. Post locally or update the GitHub list.' : 'No packs yet. Post locally or set a Raw GitHub URL.';
+    }else{
+      status.textContent = `Loaded ${merged.length} pack(s)`;
+    }
+  }
+}
+
+function renderCommunity(packs){
+  const q = ($('searchCommunity')?.value||'').toLowerCase();
+  const listEl=$('communityList'); if(!listEl) return;
+  listEl.innerHTML='';
+  const filtered=packs.filter(p=>{
+    const hay = `${p.name||''} ${p.author||''} ${p.description||''} ${(p.tags||[]).join(' ')}`.toLowerCase();
+    return hay.includes(q);
+  });
+  filtered.forEach(p=>{
+    const row=document.createElement('div'); row.className='item'; row.style.gridTemplateColumns='auto 1fr auto'; row.style.alignItems='center';
+    const img=document.createElement('img'); img.width=40; img.height=40; img.style.borderRadius='8px'; img.style.objectFit='cover'; img.style.objectPosition='50% var(--headroom)';
+    img.src=p.thumb||placeholderDataURL(p.name||'');
+    const meta=document.createElement('div');
+    const title=document.createElement('div'); title.style.fontWeight='800'; title.textContent=p.name||'Untitled';
+    const sub=document.createElement('div'); sub.style.opacity='.8'; sub.style.fontSize='12px'; sub.textContent=`by ${p.author||'Unknown'} ${p.tags?.length?' • '+p.tags.join(', '):''}`;
+    meta.append(title,sub);
+    const add=document.createElement('button'); add.textContent='Add to My Board'; add.type='button';
+    add.onclick=async()=>{
+      try{
+        let data=p.data;
+        if(!data&&p.jsonUrl){const r=await fetch(p.jsonUrl);data=await r.json();}
+        if(!data||!data.board){alert('This pack is missing data.');return;}
+        board=data.board.map(x=>({id:x.id||('id-'+Math.random().toString(36).slice(2,10)),name:x.name||'',img:x.img||''}));
+        eliminated.clear();highlightedTile=null;
+        if(data.meta){if(data.meta.columns&&$('colRange'))$('colRange').value=data.meta.columns;if(data.meta.showNames&&$('showNames'))$('showNames').checked=true;}
+        autosave();renderList();renderGrid();alert('Added to your board!');
+        $('tPlay').checked=true;
+      }catch{alert('Could not load this pack.');}
+    };
+    row.append(img,meta,add);listEl.appendChild(row);
+  });
+}
+
+/* ===== Local Community Posting ===== */
+function postLocalPack(){
+  if(!board.length){ alert('Your board is empty.'); return; }
+  const name = prompt('Pack name?'); if(!name) return;
+  const description = prompt('Short description (optional):') || '';
+  const tags = prompt('Tags (comma-separated, optional):') || '';
+  const author = prompt('Author name:') || 'Anonymous';
+  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked) };
+
+  const packRecord = {
+    id: 'p-' + Math.random().toString(36).slice(2,10),
+    name, author, description, createdAt: Date.now(),
+    tags: tags ? tags.split(',').map(s=>s.trim()).filter(Boolean) : [],
+    data: { version:2, board, meta },
+    thumb: board[0]?.img || ''
+  };
+
+  let localPacks=[];
+  try{ localPacks = JSON.parse(localStorage.getItem('gw_local_packs')||'[]'); }catch{ localPacks=[]; }
+  localPacks.unshift(packRecord);
+  localStorage.setItem('gw_local_packs', JSON.stringify(localPacks));
+  alert('Posted locally! Find it under the Community tab.');
+  $('tCommunity').checked = true;
+  fetchCommunity();
+}
+
+/* ===== Autosave ===== */
+function autosave(){ const data={board, eliminated:[...eliminated], highlightedTile, columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked)}; localStorage.setItem('gw_simple_working_v7', JSON.stringify(data)); }
+(function load(){
+  const raw=localStorage.getItem('gw_simple_working_v7');
+  if(raw){ try{ const s=JSON.parse(raw); if(s.board) board=s.board; if(s.eliminated) eliminated=new Set(s.eliminated); highlightedTile=s.highlightedTile||null; if(s.columns && $('colRange')) $('colRange').value=s.columns; if($('showNames')) $('showNames').checked=!!s.showNames; }catch{} }
+  if($('githubUrl')) $('githubUrl').value = GH_URL || '';
+  renderList(); renderGrid(); fetchCommunity();
+})();
+
+/* ===== Event binds for community & posting ===== */
+bind('refreshCommunity','click',fetchCommunity);
+bind('saveGithubUrl','click',()=>{ saveGithubUrl(($('githubUrl')?.value||'')); fetchCommunity(); });
+bind('btnPostLocal','click',postLocalPack);
+
+}); // DOMContentLoaded
+</script>
+</body>
+</html>
