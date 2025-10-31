@@ -12,12 +12,12 @@
     },
     {
       "id": "p-testpack",
-      "name": "PVZ",
-      "author": "Professorp",
+      "name": "Test Pack",
+      "author": "kdiamondosu-glitch",
       "description": "Temporary test entry to confirm the Community tab pulls multiple packs.",
       "createdAt": 1730411111000,
       "tags": ["test", "public"],
-      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/test-pack.json",
+      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/test%20json.json",
       "thumb": ""
     }
   ]
