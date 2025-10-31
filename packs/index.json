@@ -1,19 +1,10 @@
 {
   "packs": [
-    {
-      "id": "p-starterpack",
-      "name": "Starter Community Pack",
-      "author": "kdiamondosu-glitch",
-      "description": "Example pack to verify your Community tab is online.",
-      "createdAt": 1730420000000,
-      "tags": ["demo", "public"],
-      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/starter-pack.json",
-      "thumb": ""
-    },
+    
    {
   "id": "p-testpack",
-  "name": "Freddy Fazbear Test",
-  "author": "kdiamondosu-glitch",
+  "name": "Ultimate Custom Night Roster",
+  "author": "Professor Preston",
   "description": "Example using base64 data image.",
   "createdAt": 1730411111000,
   "tags": ["test", "public"],
