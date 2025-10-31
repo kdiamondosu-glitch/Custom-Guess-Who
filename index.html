@@ -463,7 +463,6 @@ function drawWheel(){
   const n = board.length || 1;
   const slice = 2*Math.PI/n;
 
-  // helper for font fit
   function fitFont(text, maxWidth, start=18, min=11){
     let size = start;
     ctx.font = `bold ${size}px system-ui,Arial`;
@@ -477,7 +476,6 @@ function drawWheel(){
   for(let i=0;i<n;i++){
     const start = angle + i*slice;
     const end   = start + slice;
-    // slice
     ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,end); ctx.closePath();
     ctx.fillStyle = i%2 ? '#223154' : '#10213b';
     ctx.fill();
@@ -577,10 +575,23 @@ function showWinnerCard(chosen){
   close && close.addEventListener('click', onClose);
 }
 
-/* ===== Community (GitHub URL + Local Merge) ===== */
+/* ===== Community (GitHub URL + Local Merge + Local Remove) ===== */
+const DEFAULT_GH_PAGE_URL = 'https://github.com/kdiamondosu-glitch/Custom-Guess-Who/blob/main/packs/index.json';
+function toRawGithub(u){
+  try{
+    const url = new URL(u);
+    if(url.hostname === 'github.com' && url.pathname.includes('/blob/')){
+      const parts = url.pathname.split('/').filter(Boolean); // user repo blob branch ...path
+      const user = parts[0], repo = parts[1], branch = parts[3];
+      const rest = parts.slice(4).join('/');
+      return `https://raw.githubusercontent.com/${user}/${repo}/${branch}/${rest}`;
+    }
+    return u;
+  }catch{ return u; }
+}
 const GH_KEY = 'gw_gh_url';
-let GH_URL = localStorage.getItem(GH_KEY) || '';
-function saveGithubUrl(url){ GH_URL=(url||'').trim(); localStorage.setItem(GH_KEY, GH_URL); }
+let GH_URL = localStorage.getItem(GH_KEY) || toRawGithub(DEFAULT_GH_PAGE_URL);
+function saveGithubUrl(url){ GH_URL=(toRawGithub(url||'').trim()); localStorage.setItem(GH_KEY, GH_URL); }
 
 async function fetchCommunity(){
   const status=$('communityStatus'); if(status) status.textContent='';
@@ -589,6 +600,8 @@ async function fetchCommunity(){
   // Local packs
   let localPacks=[];
   try{ localPacks = JSON.parse(localStorage.getItem('gw_local_packs')||'[]'); }catch{ localPacks=[]; }
+  // Tag as local
+  localPacks = localPacks.map(p=>({...p, _source:'local'}));
 
   // GitHub packs
   let remotePacks=[];
@@ -597,9 +610,14 @@ async function fetchCommunity(){
       const res = await fetch(GH_URL, { cache:'no-store' });
       if(res.ok){
         const payload = await res.json();
-        remotePacks = payload?.packs || [];
+        const raw = payload?.packs || [];
+        remotePacks = raw.map(p=>({...p, _source:'remote'}));
+      }else{
+        if(status) status.textContent = 'Could not load GitHub packs (HTTP '+res.status+').';
       }
-    }catch{}
+    }catch{
+      if(status) status.textContent = 'Could not load GitHub packs (network/CORS).';
+    }
   }
 
   const merged = [...localPacks, ...remotePacks];
@@ -622,19 +640,22 @@ function renderCommunity(packs){
     return hay.includes(q);
   });
   filtered.forEach(p=>{
-    const row=document.createElement('div'); row.className='item'; row.style.gridTemplateColumns='auto 1fr auto'; row.style.alignItems='center';
+    const row=document.createElement('div'); row.className='item'; row.style.gridTemplateColumns='auto 1fr auto auto'; row.style.alignItems='center';
     const img=document.createElement('img'); img.width=40; img.height=40; img.style.borderRadius='8px'; img.style.objectFit='cover'; img.style.objectPosition='50% var(--headroom)';
     img.src=p.thumb||placeholderDataURL(p.name||'');
     const meta=document.createElement('div');
     const title=document.createElement('div'); title.style.fontWeight='800'; title.textContent=p.name||'Untitled';
-    const sub=document.createElement('div'); sub.style.opacity='.8'; sub.style.fontSize='12px'; sub.textContent=`by ${p.author||'Unknown'} ${p.tags?.length?' • '+p.tags.join(', '):''}`;
+    const sub=document.createElement('div'); sub.style.opacity='.8'; sub.style.fontSize='12px';
+    const badge = p._source==='local' ? ' • Local' : ' • GitHub';
+    sub.textContent=`by ${p.author||'Unknown'} ${p.tags?.length?' • '+p.tags.join(', '):''}${badge}`;
     meta.append(title,sub);
+
     const add=document.createElement('button'); add.textContent='Add to My Board'; add.type='button';
     add.onclick=async()=>{
       try{
         let data=p.data;
-        if(!data&&p.jsonUrl){const r=await fetch(p.jsonUrl);data=await r.json();}
-        if(!data||!data.board){alert('This pack is missing data.');return;}
+        if(!data && p.jsonUrl){const r=await fetch(p.jsonUrl); data=await r.json();}
+        if(!data || !data.board){alert('This pack is missing data.');return;}
         board=data.board.map(x=>({id:x.id||('id-'+Math.random().toString(36).slice(2,10)),name:x.name||'',img:x.img||''}));
         eliminated.clear();highlightedTile=null;
         if(data.meta){if(data.meta.columns&&$('colRange'))$('colRange').value=data.meta.columns;if(data.meta.showNames&&$('showNames'))$('showNames').checked=true;}
@@ -642,7 +663,27 @@ function renderCommunity(packs){
         $('tPlay').checked=true;
       }catch{alert('Could not load this pack.');}
     };
-    row.append(img,meta,add);listEl.appendChild(row);
+
+    // Remove only for local packs you posted from this browser
+    let removeBtn = null;
+    if(p._source==='local'){
+      removeBtn = document.createElement('button');
+      removeBtn.textContent = '🗑 Remove';
+      removeBtn.className = 'secondary';
+      removeBtn.type='button';
+      removeBtn.title='Remove this locally posted pack';
+      removeBtn.onclick = ()=>{
+        let localPacks=[];
+        try{ localPacks = JSON.parse(localStorage.getItem('gw_local_packs')||'[]'); }catch{ localPacks=[]; }
+        const next = localPacks.filter(x=>x.id !== p.id);
+        localStorage.setItem('gw_local_packs', JSON.stringify(next));
+        fetchCommunity();
+      };
+    }
+
+    row.append(img,meta,add);
+    if(removeBtn) row.append(removeBtn);
+    listEl.appendChild(row);
   });
 }
 
@@ -660,7 +701,8 @@ function postLocalPack(){
     name, author, description, createdAt: Date.now(),
     tags: tags ? tags.split(',').map(s=>s.trim()).filter(Boolean) : [],
     data: { version:2, board, meta },
-    thumb: board[0]?.img || ''
+    thumb: board[0]?.img || '',
+    _source: 'local'
   };
 
   let localPacks=[];
