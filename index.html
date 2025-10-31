@@ -72,6 +72,11 @@ footer{margin-top:14px;color:var(--muted);font-size:13px}
 /* Contrast bump for tile names */
 #name-contrast-override{}
 .tile .name{background: rgba(0,0,0,0.88); color: #ffffff; font-weight: 700; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); padding: 8px 10px}
+
+/* Admin */
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.admin-grid .full{grid-column:1/-1}
+.admin-note{font-size:12px;opacity:.85}
 </style>
 </head>
 <body>
@@ -118,6 +123,34 @@ footer{margin-top:14px;color:var(--muted);font-size:13px}
         <div id="pairs" class="list"></div>
 
         <footer><small>Autosaves locally • Reorder with ↑ ↓ or drag • Placeholders auto-generate if no image</small></footer>
+      </div>
+
+      <!-- ===== ADMIN MODE (GitHub Posting) ===== -->
+      <div class="card">
+        <h2 class="h">Admin Mode — Post Packs to GitHub</h2>
+        <div class="admin-grid">
+          <input id="adminPassword" type="password" placeholder="Admin password" />
+          <button id="unlockAdmin" type="button">Unlock</button>
+
+          <div class="full admin-note">Enter your password to enable secure fields. Your GitHub token is <b>never saved</b> (only kept in memory).</div>
+
+          <input id="ghOwnerRepo" class="full" type="text" placeholder="Owner/Repo (e.g., kdiamondosu-glitch/Guess-Who)" disabled>
+          <div class="row">
+            <input id="ghBranch" type="text" placeholder="Branch (e.g., main)" style="min-width:200px" disabled>
+            <input id="ghFolder" type="text" placeholder="Packs folder path (e.g., packs)" style="min-width:220px" disabled>
+          </div>
+          <input id="ghIndexPath" class="full" type="text" placeholder="Index path (e.g., packs/index.json)" disabled>
+
+          <input id="ghToken" class="full" type="password" placeholder="GitHub token (fine-grained, contents: read/write)" disabled>
+
+          <div class="row">
+            <input id="commitName" type="text" placeholder="Commit author name (optional)" disabled>
+            <input id="commitEmail" type="email" placeholder="Commit author email (optional)" disabled>
+          </div>
+
+          <button id="postToGitHub" class="full" type="button" disabled>Post Pack to GitHub</button>
+          <div id="adminStatus" class="full admin-note"></div>
+        </div>
       </div>
     </section>
 
@@ -214,6 +247,7 @@ function filenameFromUrl(url){
   }
 }
 function stripExtension(name){ return name.replace(/\\.[a-z0-9]+$/i,''); }
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
 
 /* ===== State ===== */
 let board=[], eliminated=new Set(), highlightedTile=null, lastEmbeddedDataURL='';
@@ -671,6 +705,158 @@ function postLocalPack(){
   $('tCommunity').checked = true;
   fetchCommunity();
 }
+
+/* ===== Admin (GitHub Posting) ===== */
+let ADMIN_ENABLED = false;
+let GH_TOKEN = null;
+
+function setAdminEnabled(on){
+  ADMIN_ENABLED = !!on;
+  const ids = ['ghOwnerRepo','ghBranch','ghFolder','ghIndexPath','ghToken','postToGitHub','commitName','commitEmail'];
+  ids.forEach(id=>{ const el=$(id); if(el){ el.disabled = !ADMIN_ENABLED; }});
+  $('adminStatus').textContent = ADMIN_ENABLED ? 'Admin unlocked. Configure repo and press "Post Pack to GitHub".' : '';
+}
+bind('unlockAdmin','click',()=>{
+  const pass = ($('adminPassword')?.value||'').trim();
+  if(!pass){ alert('Enter password'); return; }
+  if(pass.toLowerCase() !== 'taylor swift'){ alert('Wrong password'); return; }
+  setAdminEnabled(true);
+  if($('ghBranch')) $('ghBranch').value = $('ghBranch').value || 'main';
+  if($('ghFolder')) $('ghFolder').value = $('ghFolder').value || 'packs';
+  if($('ghIndexPath')) $('ghIndexPath').value = $('ghIndexPath').value || 'packs/index.json';
+});
+
+/* GitHub API helpers */
+const GH_API = 'https://api.github.com';
+function ownerRepoParts(s){
+  const [owner,repo] = (s||'').split('/');
+  return {owner, repo};
+}
+function encodeB64UTF8(str){
+  // Proper Base64 for UTF-8 strings
+  return btoa(unescape(encodeURIComponent(str)));
+}
+async function ghGetContent({token, owner, repo, path, ref}){
+  const url = `${GH_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}${ref?`?ref=${encodeURIComponent(ref)}`:''}`;
+  const res = await fetch(url, {headers:{'Accept':'application/vnd.github+json','Authorization':`Bearer ${token}` }});
+  if(res.status===404) return null;
+  if(!res.ok) throw new Error('GitHub read failed');
+  return res.json();
+}
+async function ghPutContent({token, owner, repo, path, branch, message, contentB64, sha, authorName, authorEmail}){
+  const body = { message, content: contentB64, branch };
+  if(sha) body.sha = sha;
+  if(authorName && authorEmail){ body.committer = { name: authorName, email: authorEmail }; }
+  const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, {
+    method:'PUT',
+    headers:{'Accept':'application/vnd.github+json','Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const text = await res.text().catch(()=> '');
+    throw new Error('GitHub write failed: '+text);
+  }
+  return res.json();
+}
+function slugify(s){
+  return (s||'untitled').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,50) || 'pack';
+}
+function nowStamp(){
+  const d = new Date();
+  const pad = (n)=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+async function postPackToGitHub(){
+  if(!ADMIN_ENABLED){ alert('Unlock admin first'); return; }
+  if(!board.length){ alert('Your board is empty.'); return; }
+
+  const ownerRepo = ($('ghOwnerRepo')?.value||'').trim();
+  const {owner, repo} = ownerRepoParts(ownerRepo);
+  const branch = ($('ghBranch')?.value||'main').trim();
+  const folder = ($('ghFolder')?.value||'packs').replace(/^\\/+|\\/+$/g,'');
+  const indexPath = ($('ghIndexPath')?.value||'packs/index.json').replace(/^\\/+/,'');
+
+  GH_TOKEN = ($('ghToken')?.value||'').trim();
+  if(!owner || !repo || !GH_TOKEN){ alert('Owner/Repo and Token are required'); return; }
+
+  const authorName = ($('commitName')?.value||'').trim() || undefined;
+  const authorEmail = ($('commitEmail')?.value||'').trim() || undefined;
+
+  const status = $('adminStatus');
+  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked) };
+
+  // Collect meta prompts
+  const name = prompt('Pack name?'); if(!name) return;
+  const description = prompt('Short description (optional):') || '';
+  const tagsStr = prompt('Tags (comma-separated, optional):') || '';
+  const author = prompt('Author name:') || 'Anonymous';
+  const tags = tagsStr ? tagsStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+
+  try{
+    status.textContent = 'Creating pack file...';
+
+    // 1) Create pack JSON file under folder
+    const packSlug = `${slugify(name)}-${nowStamp()}.json`;
+    const packPath = `${folder}/${packSlug}`;
+    const packJSON = JSON.stringify({ version:2, board, meta }, null, 2);
+    const packB64 = encodeB64UTF8(packJSON);
+
+    // Check if exists for sha (should not, but JIC)
+    const existing = await ghGetContent({ token: GH_TOKEN, owner, repo, path: packPath, ref: branch });
+    const sha = existing?.sha;
+
+    await ghPutContent({
+      token: GH_TOKEN, owner, repo, path: packPath, branch,
+      message: `Add Guess Who pack: ${name}`,
+      contentB64: packB64, sha,
+      authorName, authorEmail
+    });
+
+    // 2) Update index.json
+    status.textContent = 'Updating packs index...';
+    const indexObj = await ghGetContent({ token: GH_TOKEN, owner, repo, path: indexPath, ref: branch });
+
+    let indexJSON, indexSha;
+    if(indexObj && indexObj.content){
+      const decoded = decodeURIComponent(escape(atob(indexObj.content)));
+      try{ indexJSON = JSON.parse(decoded); }catch{ indexJSON = { packs: [] }; }
+      indexSha = indexObj.sha;
+    }else{
+      indexJSON = { packs: [] };
+      indexSha = undefined;
+    }
+
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(branch)}/${packPath}`;
+    indexJSON.packs = indexJSON.packs || [];
+    indexJSON.packs.unshift({
+      id: 'p-' + Math.random().toString(36).slice(2,10),
+      name, author, description, tags,
+      jsonUrl: rawUrl,
+      thumb: board[0]?.img || '',
+      createdAt: Date.now()
+    });
+
+    const newIndexB64 = encodeB64UTF8(JSON.stringify(indexJSON, null, 2));
+    await ghPutContent({
+      token: GH_TOKEN, owner, repo, path: indexPath, branch,
+      message: `Update packs index: add ${name}`,
+      contentB64: newIndexB64, sha: indexSha,
+      authorName, authorEmail
+    });
+
+    status.innerHTML = `✅ Posted! Raw index URL set? If not, paste this in Community → “Use URL”:
+<br><code>https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(branch)}/${indexPath}</code>`;
+    alert('Pack posted to GitHub and index updated!');
+    $('tCommunity').checked = true;
+  }catch(err){
+    console.error(err);
+    status.textContent = '❌ ' + (err?.message || 'GitHub error');
+    alert('GitHub error. See Admin Status.');
+  }
+}
+
+bind('postToGitHub','click',postPackToGitHub);
 
 /* ===== Autosave ===== */
 function autosave(){ const data={board, eliminated:[...eliminated], highlightedTile, columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked)}; localStorage.setItem('gw_simple_working_v7', JSON.stringify(data)); }
