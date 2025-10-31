@@ -10,15 +10,16 @@
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/starter-pack.json",
       "thumb": ""
     },
-    {
-      "id": "p-testpack",
-      "name": "Test Pack",
-      "author": "kdiamondosu-glitch",
-      "description": "Temporary test entry to confirm the Community tab pulls multiple packs.",
-      "createdAt": 1730411111000,
-      "tags": ["test", "public"],
-      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/test%20json.json",
-      "thumb": ""
-    }
+   {
+  "id": "p-testpack",
+  "name": "Freddy Fazbear Test",
+  "author": "kdiamondosu-glitch",
+  "description": "Example using base64 data image.",
+  "createdAt": 1730411111000,
+  "tags": ["test", "public"],
+  "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/guess-who-board%20(10).json",
+  "thumb": ""
+}
+
   ]
 }
