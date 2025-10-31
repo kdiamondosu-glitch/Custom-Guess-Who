@@ -231,7 +231,12 @@ footer{margin-top:14px;color:var(--muted);font-size:13px}
 <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;display:none;z-index:60"></canvas>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+/* ---------- Rock-solid ready() so handlers always bind ---------- */
+(function ready(fn){
+  if(document.readyState !== 'loading') fn();
+  else document.addEventListener('DOMContentLoaded', fn, { once:true });
+})(function appInit(){
+try{
 /* ===== Helpers ===== */
 const $=id=>document.getElementById(id);
 function filenameFromUrl(url){
@@ -415,7 +420,7 @@ function uploadBoardFromFile(file){
 }
 function shuffle(){ for(let i=board.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[board[i],board[j]]=[board[j],board[i]];} autosave(); renderList(); renderGrid(); }
 
-/* ===== Bindings ===== */
+/* ===== Bindings (safe) ===== */
 function bind(id,ev,fn){ const el=$(id); if(el) el.addEventListener(ev,fn); }
 bind('newBoard','click',newBoard);
 bind('downloadBoard','click',downloadBoard);
@@ -714,7 +719,7 @@ function setAdminEnabled(on){
   ADMIN_ENABLED = !!on;
   const ids = ['ghOwnerRepo','ghBranch','ghFolder','ghIndexPath','ghToken','postToGitHub','commitName','commitEmail'];
   ids.forEach(id=>{ const el=$(id); if(el){ el.disabled = !ADMIN_ENABLED; }});
-  $('adminStatus').textContent = ADMIN_ENABLED ? 'Admin unlocked. Configure repo and press "Post Pack to GitHub".' : '';
+  const st = $('adminStatus'); if(st) st.textContent = ADMIN_ENABLED ? 'Admin unlocked. Configure repo and press "Post Pack to GitHub".' : '';
 }
 bind('unlockAdmin','click',()=>{
   const pass = ($('adminPassword')?.value||'').trim();
@@ -733,7 +738,6 @@ function ownerRepoParts(s){
   return {owner, repo};
 }
 function encodeB64UTF8(str){
-  // Proper Base64 for UTF-8 strings
   return btoa(unescape(encodeURIComponent(str)));
 }
 async function ghGetContent({token, owner, repo, path, ref}){
@@ -786,7 +790,6 @@ async function postPackToGitHub(){
   const status = $('adminStatus');
   const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked) };
 
-  // Collect meta prompts
   const name = prompt('Pack name?'); if(!name) return;
   const description = prompt('Short description (optional):') || '';
   const tagsStr = prompt('Tags (comma-separated, optional):') || '';
@@ -794,15 +797,13 @@ async function postPackToGitHub(){
   const tags = tagsStr ? tagsStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
 
   try{
-    status.textContent = 'Creating pack file...';
+    if(status) status.textContent = 'Creating pack file...';
 
-    // 1) Create pack JSON file under folder
     const packSlug = `${slugify(name)}-${nowStamp()}.json`;
     const packPath = `${folder}/${packSlug}`;
     const packJSON = JSON.stringify({ version:2, board, meta }, null, 2);
     const packB64 = encodeB64UTF8(packJSON);
 
-    // Check if exists for sha (should not, but JIC)
     const existing = await ghGetContent({ token: GH_TOKEN, owner, repo, path: packPath, ref: branch });
     const sha = existing?.sha;
 
@@ -813,8 +814,7 @@ async function postPackToGitHub(){
       authorName, authorEmail
     });
 
-    // 2) Update index.json
-    status.textContent = 'Updating packs index...';
+    if(status) status.textContent = 'Updating packs index...';
     const indexObj = await ghGetContent({ token: GH_TOKEN, owner, repo, path: indexPath, ref: branch });
 
     let indexJSON, indexSha;
@@ -845,13 +845,13 @@ async function postPackToGitHub(){
       authorName, authorEmail
     });
 
-    status.innerHTML = `✅ Posted! Raw index URL set? If not, paste this in Community → “Use URL”:
+    if(status) status.innerHTML = `✅ Posted! Raw index URL set? If not, paste this in Community → “Use URL”:
 <br><code>https://raw.githubusercontent.com/${owner}/${repo}/${encodeURIComponent(branch)}/${indexPath}</code>`;
     alert('Pack posted to GitHub and index updated!');
     $('tCommunity').checked = true;
   }catch(err){
     console.error(err);
-    status.textContent = '❌ ' + (err?.message || 'GitHub error');
+    if(status) status.textContent = '❌ ' + (err?.message || 'GitHub error');
     alert('GitHub error. See Admin Status.');
   }
 }
@@ -872,7 +872,11 @@ bind('refreshCommunity','click',fetchCommunity);
 bind('saveGithubUrl','click',()=>{ saveGithubUrl(($('githubUrl')?.value||'')); fetchCommunity(); });
 bind('btnPostLocal','click',postLocalPack);
 
-}); // DOMContentLoaded
+} catch(err){
+  console.error('Init error:', err);
+  alert('Script error during startup. Check console for details.');
+}
+}); // ready/appInit
 </script>
 </body>
 </html>
