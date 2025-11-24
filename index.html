@@ -72,6 +72,59 @@ footer{margin-top:14px;color:var(--muted);font-size:13px}
 /* Contrast bump for tile names */
 #name-contrast-override{}
 .tile .name{background: rgba(0,0,0,0.88); color: #ffffff; font-weight: 700; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); padding: 8px 10px}
+
+/* ========== FNaF-style board backgrounds (THEME ADDED) ========== */
+
+#gridWrap{
+  transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* Default – just keep card background look */
+#gridWrap.theme-default{
+  background: var(--card);
+}
+
+/* Shared checker pattern (transparent squares) */
+.fnaf-checker{
+  background-image:
+    linear-gradient(45deg, rgba(0,0,0,0.55) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.55)),
+    linear-gradient(45deg, rgba(0,0,0,0.35) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.35) 75%, rgba(0,0,0,0.35));
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  box-shadow: 0 0 24px rgba(0,0,0,0.65);
+  border-color: #000000aa;
+}
+
+/* Blue FNaF checker */
+#gridWrap.theme-fnaf-blue{
+  background-color:#071b3f;
+  position:relative;
+}
+#gridWrap.theme-fnaf-blue::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:0.9;
+  pointer-events:none;
+  border-radius:inherit;
+}
+#gridWrap.theme-fnaf-blue.fnaf-checker::before{ /* just to ensure class composes nicely */}
+
+/* Red FNaF checker */
+#gridWrap.theme-fnaf-red{
+  background-color:#3f0707;
+  position:relative;
+}
+#gridWrap.theme-fnaf-red::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:0.9;
+  pointer-events:none;
+  border-radius:inherit;
+}
+
+/* We’ll apply .fnaf-checker alongside the theme classes in JS */
 </style>
 </head>
 <body>
@@ -130,6 +183,15 @@ footer{margin-top:14px;color:var(--muted);font-size:13px}
               <input id="colRange" type="range" min="2" max="9" value="5">
             </label>
             <label class="inline"><input id="showNames" type="checkbox"> Show names</label>
+
+            <!-- THEME DROPDOWN ADDED -->
+            <label class="inline"><span>Theme</span>
+              <select id="bgTheme">
+                <option value="default">Default</option>
+                <option value="fnaf-blue">FNaF Blue</option>
+                <option value="fnaf-red">FNaF Red</option>
+              </select>
+            </label>
           </div>
           <div class="controls">
             <button id="shuffle" class="secondary" type="button" title="S">Shuffle</button>
@@ -141,7 +203,7 @@ footer{margin-top:14px;color:var(--muted);font-size:13px}
         </div>
       </div>
 
-      <div id="gridWrap" class="card" style="padding:12px;height:70vh">
+      <div id="gridWrap" class="card theme-default" style="padding:12px;height:70vh">
         <div id="grid" class="grid"></div>
       </div>
     </section>
@@ -217,6 +279,7 @@ function stripExtension(name){ return name.replace(/\\.[a-z0-9]+$/i,''); }
 
 /* ===== State ===== */
 let board=[], eliminated=new Set(), highlightedTile=null, lastEmbeddedDataURL='';
+let currentTheme = 'default'; // THEME STATE ADDED
 const grid=$('grid'); const pairs=$('pairs');
 const GAP=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap'))||16;
 
@@ -307,6 +370,25 @@ document.addEventListener('fullscreenchange', ()=>{
   }
 });
 
+/* ===== THEME APPLY FUNCTION ===== */
+function applyTheme(mode='default', skipSave=false){
+  currentTheme = mode;
+  const wrap = $('gridWrap');
+  const selector = $('bgTheme');
+  if(selector && selector.value !== mode) selector.value = mode;
+  if(!wrap) return;
+
+  wrap.classList.remove('theme-default','theme-fnaf-blue','theme-fnaf-red','fnaf-checker');
+  if(mode === 'fnaf-blue'){
+    wrap.classList.add('theme-fnaf-blue','fnaf-checker');
+  }else if(mode === 'fnaf-red'){
+    wrap.classList.add('theme-fnaf-red','fnaf-checker');
+  }else{
+    wrap.classList.add('theme-default');
+  }
+  if(!skipSave) autosave();
+}
+
 /* ===== Core ops ===== */
 function newBoard(){ board=[]; eliminated.clear(); highlightedTile=null; autosave(); renderList(); renderGrid(); }
 function addChar(name,img){
@@ -325,7 +407,7 @@ function addChar(name,img){
   autosave(); renderList(); renderGrid();
 }
 function downloadBoard(){
-  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked) };
+  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked), theme: currentTheme }; // theme added
   const blob=new Blob([JSON.stringify({version:2,board,meta},null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='guess-who-board.json'; document.body.appendChild(a); a.click(); a.remove();
 }
@@ -372,7 +454,11 @@ function uploadBoardFromFile(file){
 
     board = parsedBoard.map(x=>({ id: x.id || ('id-'+Math.random().toString(36).slice(2,10)), name: x.name || '', img: x.img || '' }));
     eliminated.clear(); highlightedTile=null;
-    if(parsedMeta){ if(parsedMeta.columns && $('colRange')) $('colRange').value=parsedMeta.columns; if(parsedMeta.showNames && $('showNames')) $('showNames').checked=true; }
+    if(parsedMeta){
+      if(parsedMeta.columns && $('colRange')) $('colRange').value=parsedMeta.columns;
+      if(parsedMeta.showNames && $('showNames')) $('showNames').checked=true;
+      if(parsedMeta.theme) applyTheme(parsedMeta.theme, true); // APPLY THEME FROM META
+    }
     autosave(); renderList(); renderGrid();
   }catch(e){
     alert('Bad JSON file (unrecognized structure). Try exporting a pack first to see the expected shape.');
@@ -390,6 +476,12 @@ bind('shuffle','click',shuffle);
 bind('clearXs','click',()=>{ eliminated.clear(); autosave(); renderGrid(); });
 bind('colRange','input',()=> renderGrid());
 bind('showNames','change',()=> renderGrid());
+
+// THEME SELECT BIND
+bind('bgTheme','change', e => {
+  const val = e.target.value || 'default';
+  applyTheme(val);
+});
 
 bind('btnUploadJson','click',()=> $('uploadJson')?.click());
 bind('uploadJson','change',e=>{ const f=e.target.files?.[0]; if(f){ uploadBoardFromFile(f); } e.target.value=''; });
@@ -658,7 +750,11 @@ function renderCommunity(packs){
         if(!data || !data.board){alert('This pack is missing data.');return;}
         board=data.board.map(x=>({id:x.id||('id-'+Math.random().toString(36).slice(2,10)),name:x.name||'',img:x.img||''}));
         eliminated.clear();highlightedTile=null;
-        if(data.meta){if(data.meta.columns&&$('colRange'))$('colRange').value=data.meta.columns;if(data.meta.showNames&&$('showNames'))$('showNames').checked=true;}
+        if(data.meta){
+          if(data.meta.columns&&$('colRange'))$('colRange').value=data.meta.columns;
+          if(data.meta.showNames&&$('showNames'))$('showNames').checked=true;
+          if(data.meta.theme) applyTheme(data.meta.theme, true);
+        }
         autosave();renderList();renderGrid();alert('Added to your board!');
         $('tPlay').checked=true;
       }catch{alert('Could not load this pack.');}
@@ -694,7 +790,7 @@ function postLocalPack(){
   const description = prompt('Short description (optional):') || '';
   const tags = prompt('Tags (comma-separated, optional):') || '';
   const author = prompt('Author name:') || 'Anonymous';
-  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked) };
+  const meta = { columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked), theme: currentTheme };
 
   const packRecord = {
     id: 'p-' + Math.random().toString(36).slice(2,10),
@@ -715,10 +811,32 @@ function postLocalPack(){
 }
 
 /* ===== Autosave ===== */
-function autosave(){ const data={board, eliminated:[...eliminated], highlightedTile, columns:+($('colRange')?.value||5), showNames:!!($('showNames')?.checked)}; localStorage.setItem('gw_simple_working_v7', JSON.stringify(data)); }
+function autosave(){
+  const data={
+    board,
+    eliminated:[...eliminated],
+    highlightedTile,
+    columns:+($('colRange')?.value||5),
+    showNames:!!($('showNames')?.checked),
+    theme: currentTheme   // SAVE THEME
+  };
+  localStorage.setItem('gw_simple_working_v7', JSON.stringify(data));
+}
 (function load(){
   const raw=localStorage.getItem('gw_simple_working_v7');
-  if(raw){ try{ const s=JSON.parse(raw); if(s.board) board=s.board; if(s.eliminated) eliminated=new Set(s.eliminated); highlightedTile=s.highlightedTile||null; if(s.columns && $('colRange')) $('colRange').value=s.columns; if($('showNames')) $('showNames').checked=!!s.showNames; }catch{} }
+  if(raw){ try{
+    const s=JSON.parse(raw);
+    if(s.board) board=s.board;
+    if(s.eliminated) eliminated=new Set(s.eliminated);
+    highlightedTile=s.highlightedTile||null;
+    if(s.columns && $('colRange')) $('colRange').value=s.columns;
+    if($('showNames')) $('showNames').checked=!!s.showNames;
+    if(s.theme) currentTheme = s.theme;
+  }catch{} }
+
+  // initialize theme before first render
+  applyTheme(currentTheme, true);
+
   if($('githubUrl')) $('githubUrl').value = GH_URL || '';
   renderList(); renderGrid(); fetchCommunity();
 })();
