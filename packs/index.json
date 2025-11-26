@@ -1,25 +1,34 @@
 {
   "packs": [
-    
-   {
-  "id": "p-testpack",
-  "name": "Ultimate Custom Night Roster",
-  "author": "Professor Preston",
-  "description": "Example using base64 data image.",
-  "createdAt": 1730411111000,
-  "tags": ["test", "public"],
-  "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/guess-who-board%20(10).json",
-  "thumb": ""
-},
-{
-  "id": "p-testpack",
-  "name": "DISNEY",
-  "author": "Professor Preston",
-  "description": "Example using base64 data image.",
-  "createdAt": 1730411111000,
-  "tags": ["test", "public"],
-  "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/refs/heads/main/packs/disney.json",
-  "thumb": ""
-}
+    {
+      "id": "p-testpack",
+      "name": "Ultimate Custom Night Roster",
+      "author": "Professor Preston",
+      "description": "Example using base64 data image.",
+      "createdAt": 1730411111000,
+      "tags": ["test", "public"],
+      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/guess-who-board%20(10).json",
+      "thumb": ""
+    },
+    {
+      "id": "p-testpack",
+      "name": "DISNEY",
+      "author": "Professor Preston",
+      "description": "Example using base64 data image.",
+      "createdAt": 1730411111000,
+      "tags": ["test", "public"],
+      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/refs/heads/main/packs/disney.json",
+      "thumb": ""
+    },
+    {
+      "id": "p-mariopack",
+      "name": "MARIO",
+      "author": "Professor Preston",
+      "description": "50-character Mario Guess Who pack.",
+      "createdAt": 1730411111000,
+      "tags": ["test", "public"],
+      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/mario.json",
+      "thumb": ""
+    }
   ]
 }
