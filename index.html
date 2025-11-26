@@ -353,6 +353,7 @@ body.theme-arcade-green{
             <button id="clearXs" class="secondary" type="button" title="C">Clear X’s</button>
             <button id="fullscreenBtn" class="secondary" type="button" title="F">Fullscreen</button>
             <button id="exportPng" class="secondary" type="button">Export PNG</button>
+            <button id="coinFlip" class="secondary" type="button">Coin Flip</button>
             <button id="openSpinner" type="button">🎯 Spin</button>
           </div>
         </div>
@@ -428,12 +429,12 @@ function filenameFromUrl(url){
     const base=p.substring(p.lastIndexOf('/')+1);
     return base || '';
   }catch{
-    const norm=(url||'').replace(/\\\\/g,'/');
+    const norm=(url||'').replace(/\\/g,'/');
     const base=norm.substring(norm.lastIndexOf('/')+1);
     return base || '';
   }
 }
-function stripExtension(name){ return name.replace(/\\.[a-z0-9]+$/i,''); }
+function stripExtension(name){ return name.replace(/\.[a-z0-9]+$/i,''); }
 
 /* ===== State ===== */
 let board=[], eliminated=new Set(), highlightedTile=null, lastEmbeddedDataURL='';
@@ -449,7 +450,7 @@ function placeholderDataURL(name){
   const g=ctx.createLinearGradient(0,0,256,256);
   g.addColorStop(0,'#0a2a4e'); g.addColorStop(1,'#17325e');
   ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height);
-  const initials=(name||'??').trim().split(/\\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase()||'??';
+  const initials=(name||'??').trim().split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase()||'??';
   ctx.fillStyle='rgba(255,255,255,.12)';
   for(let i=0;i<8;i++){
     ctx.beginPath();
@@ -718,7 +719,7 @@ bind('btnAddImages','click',()=>$('uploadImages')?.click());
 bind('uploadImages','change',async e=>{
   const files=[...(e.target.files||[])];
   if(!files.length) return;
-  const first=files.find(f=>/^image\\//i.test(f.type));
+  const first=files.find(f=>/^image\//i.test(f.type));
   if(!first){ e.target.value=''; return; }
   await new Promise(res=>{
     const rdr=new FileReader();
@@ -754,7 +755,7 @@ bind('exportPng','click',async()=>{
   if(document.fullscreenElement===$('gridWrap')){
     const template=getComputedStyle(grid).gridTemplateColumns;
     cols=template.split(' ').length;
-    const m=template.match(/(\\d+)px/);
+    const m=template.match(/(\d+)px/);
     size=m?parseInt(m[1],10):128;
   }else{
     cols=+($('colRange')?.value||5);
@@ -1207,6 +1208,50 @@ function autosave(){
 bind('refreshCommunity','click',fetchCommunity);
 bind('saveGithubUrl','click',()=>{ saveGithubUrl(($('githubUrl')?.value||'')); fetchCommunity(); });
 bind('btnPostLocal','click',postLocalPack);
+
+/* ===== COIN FLIP ===== */
+bind('coinFlip','click', () => {
+  const blueFirst = Math.random() < 0.5;
+  alert(blueFirst ? 'Blue (Player 1) goes first!' : 'Red (Player 2) goes first!');
+});
+
+/* ===== KEYBOARD SHORTCUTS ===== */
+document.addEventListener('keydown', (e) => {
+  // Ignore when using modifier shortcuts or typing in inputs
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const active = document.activeElement;
+  if (active && (
+    active.tagName === 'INPUT' ||
+    active.tagName === 'TEXTAREA' ||
+    active.isContentEditable
+  )) {
+    return;
+  }
+
+  switch (e.key) {
+    case '1':
+      $('tCreate')?.click();
+      break;
+    case '2':
+      $('tPlay')?.click();
+      break;
+    case '3':
+      $('tCommunity')?.click();
+      break;
+    case 's':
+    case 'S':
+      $('shuffle')?.click();
+      break;
+    case 'c':
+    case 'C':
+      $('clearXs')?.click();
+      break;
+    case 'f':
+    case 'F':
+      $('fullscreenBtn')?.click();
+      break;
+  }
+});
 
 }); // DOMContentLoaded
 </script>
