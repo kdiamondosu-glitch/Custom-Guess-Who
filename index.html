@@ -234,12 +234,14 @@ body.theme-arcade-green{
   height:70vh;
   transition:background 0.25s ease,box-shadow 0.25s ease,border-color 0.25s ease;
 }
-/* Custom image board background */
+/* Custom image board background (single image only) */
 #gridWrap.custom-bg{
+  background-image: var(--custom-bg);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
+
 
 /* default board just uses card color */
 #gridWrap.theme-default{
@@ -561,21 +563,7 @@ function tileNodeFor(c){
   });
   return t;
 }
-function applyCustomBackground(dataUrl){
-  const wrap = $('gridWrap');
-  if(!wrap) return;
-
-  if(dataUrl){
-    wrap.style.backgroundImage = `url(${dataUrl})`;
-    wrap.classList.add('custom-bg');
-    customBoardBg = dataUrl;
-  }else{
-    wrap.style.backgroundImage = '';
-    wrap.classList.remove('custom-bg');
-    customBoardBg = null;
-  }
-  autosave();
-}
+\
 
 function renderGrid(){
   if(!grid) return;
@@ -592,6 +580,39 @@ function renderGrid(){
     grid.style.gridTemplateColumns=`repeat(${cols}, minmax(0,1fr))`;
     [...grid.children].forEach(t=>{t.style.width='';t.style.height='';});
   }
+  autosave();
+}
+function applyCustomBackground(dataUrl){
+  const wrap = $('gridWrap');
+  if(!wrap) return;
+
+  if(dataUrl){
+    // Remove all theme classes that add patterns
+    wrap.classList.remove(
+      'theme-default',
+      'theme-fnaf-blue',
+      'theme-fnaf-red',
+      'theme-fnaf-purple',
+      'theme-arcade-green',
+      'fnaf-checker'
+    );
+
+    // Apply ONE background image
+    wrap.style.setProperty('--custom-bg', `url(${dataUrl})`);
+    wrap.classList.add('custom-bg');
+
+    customBoardBg = dataUrl;
+  }else{
+    // Clear image
+    wrap.style.removeProperty('--custom-bg');
+    wrap.classList.remove('custom-bg');
+
+    customBoardBg = null;
+
+    // Restore theme cleanly
+    applyTheme(currentTheme, true);
+  }
+
   autosave();
 }
 
@@ -1302,9 +1323,7 @@ function autosave(){
     }catch{}
   }
   applyTheme(currentTheme,true);
-  if(s.customBoardBg){
-  applyCustomBackground(s.customBoardBg);
-}
+ 
 
   if($('githubUrl')) $('githubUrl').value=GH_URL||'';
   renderList(); renderGrid(); fetchCommunity();
