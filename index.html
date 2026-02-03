@@ -1281,7 +1281,7 @@ function autosave(){
     highlightedTile,
     columns:+($('colRange')?.value||5),
     showNames:!!($('showNames')?.checked),
-    theme:currentTheme
+    theme:currentTheme,
     customBoardBg
   };
   localStorage.setItem('gw_simple_working_v7',JSON.stringify(data));
