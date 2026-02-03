@@ -4,7 +4,7 @@
       "id": "p-testpack",
       "name": "Ultimate Custom Night Roster",
       "author": "Professor Preston",
-      "description": "Example using base64 data image.",
+      "description": "All 50 non secret fnaf UCN Charectors",
       "createdAt": 1730411111000,
       "tags": ["Fnaf", "Video Game", "Public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/guess-who-board%20(10).json",
@@ -14,7 +14,7 @@
       "id": "p-bloonspack",
       "name": "BLOONS",
       "author": "Professor Preston",
-      "description": "Bloons / BTD character Guess Who pack.",
+      "description": "BTD character Guess Who pack.",
       "createdAt": 1730411111000,
       "tags": ["Bloons", "Video Game", "Public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/Bloons.json",
@@ -25,7 +25,7 @@
       "id": "p-disneypack",
       "name": "DISNEY",
       "author": "Professor Preston",
-      "description": "Example using base64 data image.",
+      "description": "Disney Charectors from classic movies.",
       "createdAt": 1730411111000,
       "tags": ["Disney","Movie", "public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/refs/heads/main/packs/disney.json",
@@ -43,12 +43,22 @@
     },
 {
       "id": "p-Pokepack",
-      "name": "Pokemon 1-50",
+      "name": "Pokemon 1-49",
       "author": "Professor Preston",
-      "description": "50-character Mario Guess Who pack.",
+      "description": "First 49 Pokemon",
       "createdAt": 1730411111000,
       "tags": ["Pokemon", "Video Game", "Public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/guess-who-board (3).json",
+      "thumb": ""
+    },
+    {
+      "id": "p-cuppack",
+      "name": "Cuphead Bosses",
+      "author": "Professor Preston",
+      "description": "All Cuphead Bosses.",
+      "createdAt": 1730411111000,
+      "tags": ["Cuphead", "Video Game", "Public"],
+      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/cuphead.json",
       "thumb": ""
     }
   ]
