@@ -6,7 +6,7 @@
       "author": "Professor Preston",
       "description": "Example using base64 data image.",
       "createdAt": 1730411111000,
-      "tags": ["test", "public"],
+      "tags": ["Fnaf", "Video Game", "Public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/guess-who-board%20(10).json",
       "thumb": ""
     },
@@ -16,7 +16,7 @@
       "author": "Professor Preston",
       "description": "Bloons / BTD character Guess Who pack.",
       "createdAt": 1730411111000,
-      "tags": ["bloons", "btd", "public"],
+      "tags": ["Bloons", "Video Game", "Public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/Bloons.json",
       "thumb": ""
     },
@@ -27,7 +27,7 @@
       "author": "Professor Preston",
       "description": "Example using base64 data image.",
       "createdAt": 1730411111000,
-      "tags": ["test", "public"],
+      "tags": ["Disney","Movie", "public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/refs/heads/main/packs/disney.json",
       "thumb": ""
     },
@@ -37,7 +37,7 @@
       "author": "Professor Preston",
       "description": "50-character Mario Guess Who pack.",
       "createdAt": 1730411111000,
-      "tags": ["test", "public"],
+      "tags": ["Mario", "Video Game", "Public"],
       "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/mario.json",
       "thumb": ""
     }
