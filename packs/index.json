@@ -11,24 +11,13 @@
       "thumb": ""
     },
     {
-      "id": "p-bloonspack",
-      "name": "BLOONS",
-      "author": "Professor Preston",
-      "description": "Bloons / BTD character Guess Who pack.",
-      "createdAt": 1730411111000,
-      "tags": ["bloons", "btd", "public"],
-      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/Bloons.json",
-      "thumb": ""
-    },
-
-    {
-      "id": "p-disneypack",
+      "id": "p-testpack",
       "name": "DISNEY",
       "author": "Professor Preston",
       "description": "Example using base64 data image.",
       "createdAt": 1730411111000,
       "tags": ["test", "public"],
-      "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/main/packs/disney.json",
+      "jsonUrl": "https://raw.githubusercontent.com/kdiamondosu-glitch/Custom-Guess-Who/refs/heads/main/packs/disney.json",
       "thumb": ""
     },
     {
@@ -42,4 +31,4 @@
       "thumb": ""
     }
   ]
-}
+} 
