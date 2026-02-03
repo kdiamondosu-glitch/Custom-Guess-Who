@@ -828,23 +828,38 @@ bind('uploadJson','change',e=>{
 });
 
 bind('btnAddImages','click',()=>$('uploadImages')?.click());
-bind('uploadImages','change',async e=>{
-  const files=[...(e.target.files||[])];
-  if(!files.length) return;
-  const first=files.find(f=>/^image\//i.test(f.type));
-  if(!first){ e.target.value=''; return; }
-  await new Promise(res=>{
-    const rdr=new FileReader();
-    rdr.onload=()=>{
-      const urlField=$('imgInput');
-      if(urlField) urlField.value=rdr.result;
-      res();
-    };
-    rdr.onerror=()=>res();
-    rdr.readAsDataURL(first);
-  });
-  e.target.value='';
+bind('uploadImages','change', async e=>{
+  const files = [...(e.target.files || [])].filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+
+  for (const file of files) {
+    await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const imgData = reader.result;
+
+        // Auto-name from filename
+        const baseName = stripExtension(file.name || '');
+        const name = baseName || `Character ${board.length + 1}`;
+
+        board.push({
+          id: 'char-' + Math.random().toString(36).slice(2, 10),
+          name,
+          img: imgData
+        });
+
+        res();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  autosave();
+  renderList();
+  renderGrid();
+  e.target.value = '';
 });
+
 bind('btnUploadBg','click',()=> $('uploadBg')?.click());
 
 bind('uploadBg','change', e=>{
