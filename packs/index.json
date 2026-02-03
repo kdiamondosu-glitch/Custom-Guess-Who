@@ -22,7 +22,7 @@
     },
 
     {
-      "id": "p-testpack",
+      "id": "p-disneypack",
       "name": "DISNEY",
       "author": "Professor Preston",
       "description": "Example using base64 data image.",
