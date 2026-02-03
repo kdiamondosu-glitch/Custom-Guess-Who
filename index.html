@@ -234,6 +234,12 @@ body.theme-arcade-green{
   height:70vh;
   transition:background 0.25s ease,box-shadow 0.25s ease,border-color 0.25s ease;
 }
+/* Custom image board background */
+#gridWrap.custom-bg{
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 
 /* default board just uses card color */
 #gridWrap.theme-default{
@@ -356,6 +362,10 @@ body.theme-arcade-green{
             <button id="btnAddImages" class="secondary" type="button">Add images</button>
             <input id="uploadImages" type="file" accept="image/*" multiple style="display:none">
             <button id="btnPostLocal" type="button">Post to Community (Local)</button>
+            <button id="btnUploadBg" class="secondary" type="button">Upload Background</button>
+            <button id="btnClearBg" class="secondary" type="button">Clear Background</button>
+            <input id="uploadBg" type="file" accept="image/*" style="display:none">
+
           </div>
         </div>
       </div>
@@ -502,6 +512,7 @@ function stripExtension(name){ return name.replace(/\.[a-z0-9]+$/i,''); }
 /* ===== State ===== */
 let board=[], eliminated=new Set(), highlightedTile=null, lastEmbeddedDataURL='';
 let currentTheme='default';
+let customBoardBg = null;
 const ALL_THEMES=['default','fnaf-blue','fnaf-red','fnaf-purple','arcade-green'];
 const grid=$('grid'), pairs=$('pairs');
 const GAP=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap'))||16;
@@ -549,6 +560,21 @@ function tileNodeFor(c){
     autosave(); renderGrid();
   });
   return t;
+}
+function applyCustomBackground(dataUrl){
+  const wrap = $('gridWrap');
+  if(!wrap) return;
+
+  if(dataUrl){
+    wrap.style.backgroundImage = `url(${dataUrl})`;
+    wrap.classList.add('custom-bg');
+    customBoardBg = dataUrl;
+  }else{
+    wrap.style.backgroundImage = '';
+    wrap.classList.remove('custom-bg');
+    customBoardBg = null;
+  }
+  autosave();
 }
 
 function renderGrid(){
@@ -794,6 +820,20 @@ bind('uploadImages','change',async e=>{
   });
   e.target.value='';
 });
+bind('btnUploadBg','click',()=> $('uploadBg')?.click());
+
+bind('uploadBg','change', e=>{
+  const file = e.target.files?.[0];
+  if(!file || !file.type.startsWith('image/')) return;
+
+  const reader = new FileReader();
+  reader.onload = () => applyCustomBackground(reader.result);
+  reader.readAsDataURL(file);
+
+  e.target.value = '';
+});
+
+bind('btnClearBg','click', ()=> applyCustomBackground(null));
 
 /* Fullscreen, Export PNG */
 bind('fullscreenBtn','click',async()=>{
@@ -1242,6 +1282,7 @@ function autosave(){
     columns:+($('colRange')?.value||5),
     showNames:!!($('showNames')?.checked),
     theme:currentTheme
+    customBoardBg
   };
   localStorage.setItem('gw_simple_working_v7',JSON.stringify(data));
 }
@@ -1261,6 +1302,10 @@ function autosave(){
     }catch{}
   }
   applyTheme(currentTheme,true);
+  if(s.customBoardBg){
+  applyCustomBackground(s.customBoardBg);
+}
+
   if($('githubUrl')) $('githubUrl').value=GH_URL||'';
   renderList(); renderGrid(); fetchCommunity();
 })();
